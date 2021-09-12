@@ -16,10 +16,28 @@ limitations under the License.
 package cmd
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 
 	"github.com/spf13/cobra"
 )
+
+const adrTemplate = `
+# {{.Number}}. {{.Title}}
+======
+Date: {{.Date}}
+## Status
+======
+{{.Status}}
+## Context
+======
+## Decision
+======
+## Consequences
+======
+
+`
 
 // newCmd represents the new command
 var newCmd = &cobra.Command{
@@ -29,6 +47,7 @@ var newCmd = &cobra.Command{
 
 addr new "my decision record"`,
 	Run: func(cmd *cobra.Command, args []string) {
+		parseTemplate("")
 		fmt.Println("new called")
 	},
 }
@@ -45,4 +64,13 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// newCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func parseTemplate(config interface{}) (string, error) {
+	out := new(bytes.Buffer)
+	t := template.Must(template.New("compiled_template").Parse(adrTemplate))
+	if err := t.Execute(out, config); err != nil {
+		return "", err
+	}
+	return out.String(), nil
 }

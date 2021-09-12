@@ -16,8 +16,10 @@ limitations under the License.
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -52,13 +54,12 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Need to run git rev-parse --show-toplevel to get the root of a git repo.
-		// Find home directory.
-		home, err := os.UserHomeDir()
+		// Find path of the root of the git repo.
+		rootDir, err := gitRepositoryRoot()
 		cobra.CheckErr(err)
 
-		// Search config in home directory with name ".addr" (without extension).
-		viper.AddConfigPath(home)
+		// Search config in git repo directory with name ".addr" (without extension).
+		viper.AddConfigPath(string(rootDir))
 		viper.SetConfigType("yaml")
 		viper.SetConfigName(".addr")
 	}
@@ -69,4 +70,13 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+func gitRepositoryRoot() (string, error) {
+	cmd := exec.Command("git rev-parse --show-toplevel")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("error retrieving git repository info: %v", err.Error()))
+	}
+	return string(output), nil
 }
