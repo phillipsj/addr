@@ -19,6 +19,12 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -39,6 +45,22 @@ Date: {{.Date}}
 
 `
 
+type Adr struct {
+	Number int
+	Title  string
+	Date   string
+	Status AdrStatus
+}
+
+type AdrStatus string
+
+const (
+	PROPOSED   AdrStatus = "Proposed"
+	ACCEPTED   AdrStatus = "Accepted"
+	DEPRECATED AdrStatus = "Deprecated"
+	SUPERSEDED AdrStatus = "Superseded"
+)
+
 // newCmd represents the new command
 var newCmd = &cobra.Command{
 	Use:   "new",
@@ -47,7 +69,18 @@ var newCmd = &cobra.Command{
 
 addr new "my decision record"`,
 	Run: func(cmd *cobra.Command, args []string) {
-		parseTemplate("")
+		a := Adr{
+			Title:  strings.Join(args, " "),
+			Date:   time.Now().Format("2006-02-01 15:04:05"),
+			Status: PROPOSED,
+		}
+		adr, err := parseTemplate(a)
+		if err != nil {
+			panic(err)
+		}
+		file := strconv.Itoa(a.Number) + "-" + strings.Join(strings.Split(strings.Trim(a.Title, "\n \t"), " "), "-") + ".md"
+		path := filepath.Join("", file)
+		writeFile(path, adr)
 		fmt.Println("new called")
 	},
 }
@@ -73,4 +106,13 @@ func parseTemplate(config interface{}) (string, error) {
 		return "", err
 	}
 	return out.String(), nil
+}
+
+func writeFile(name string, content string) error {
+	os.MkdirAll(filepath.Dir(name), 0755)
+	err := ioutil.WriteFile(name, []byte(content), 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }
